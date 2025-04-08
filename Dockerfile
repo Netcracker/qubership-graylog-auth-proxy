@@ -1,4 +1,4 @@
-FROM python:3.13.0-alpine3.20
+FROM python:3.13.2-alpine3.20
 
 # Copy requirements to install them
 COPY requirements.txt /etc/requirements.txt
