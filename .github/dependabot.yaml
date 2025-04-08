@@ -4,14 +4,11 @@ updates:
   directory: "/"
   schedule:
     interval: "monthly"
-# Pip bot configurations
-- package-ecosystem: "pip"
+- package-ecosystem: "docker"
   directory: "/"
   schedule:
     interval: "monthly"
-  open-pull-requests-limit: 20
-# Docker bot configurations
-- package-ecosystem: "docker"
+- package-ecosystem: "pip"
   directory: "/"
   schedule:
     interval: "monthly"
