@@ -4,6 +4,6 @@ Jinja2~=3.1.4
 schedule~=1.2.1
 PyYAML~=6.0.1
 ConfigArgParse~=1.7.0
-prometheus-client~=0.20.0
+prometheus-client~=0.21.1
 oauthlib~=3.2.2
 jsonpath-ng~=1.6.1
