@@ -1,6 +1,6 @@
 python-ldap~=3.4.4
 requests~=2.32.3
-Jinja2~=3.1.4
+Jinja2~=3.1.6
 schedule~=1.2.2
 PyYAML~=6.0.1
 ConfigArgParse~=1.7.0
