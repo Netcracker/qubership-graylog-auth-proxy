@@ -1,4 +1,5 @@
-FROM python:3.13.2-alpine3.20
+# hadolint global ignore=DL3013,DL3018
+FROM python:3.13.3-alpine3.21
 
 # Copy requirements to install them
 COPY requirements.txt /etc/requirements.txt
@@ -19,8 +20,7 @@ RUN apk --no-cache add --upgrade \
     && apk --no-cache add --upgrade --virtual \
         build-dependencies \
         build-base \
-    && python3 -m pip install --upgrade \
-        pip \
+    && python3 -m pip install --no-cache-dir --upgrade pip \
     && python3 -m pip install --no-cache-dir -r /etc/requirements.txt \
     && apk del build-dependencies
 
