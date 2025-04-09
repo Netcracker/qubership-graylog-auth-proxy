@@ -4,7 +4,6 @@
         "**/.git/**",
         "**/charts/*/templates/*/*.yaml",
         "**/charts/*/templates/*/*/*.yaml",
-        "**/docs/**",
-        "**/controllers/**"
+        "**/docs/examples/**"
     ]
 }
