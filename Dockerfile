@@ -1,5 +1,5 @@
 # hadolint global ignore=DL3013,DL3018
-FROM python:3.13.3-alpine3.21
+FROM python:3.13.5-alpine3.21
 
 # Copy requirements to install them
 COPY requirements.txt /etc/requirements.txt
