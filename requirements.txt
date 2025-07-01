@@ -5,5 +5,5 @@ schedule~=1.2.2
 PyYAML~=6.0.1
 ConfigArgParse~=1.7.1
 prometheus-client~=0.22.1
-oauthlib~=3.2.2
+oauthlib~=3.3.1
 jsonpath-ng~=1.7.0
