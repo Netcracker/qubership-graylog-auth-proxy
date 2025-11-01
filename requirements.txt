@@ -1,4 +1,4 @@
-python-ldap~=3.4.4
+python-ldap~=3.4.5
 requests~=2.32.5
 Jinja2~=3.1.6
 schedule~=1.2.2
