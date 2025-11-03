@@ -1,9 +1,9 @@
-python-ldap~=3.4.4
+python-ldap~=3.4.5
 requests~=2.32.5
 Jinja2~=3.1.6
 schedule~=1.2.2
-PyYAML~=6.0.2
+PyYAML~=6.0.3
 ConfigArgParse~=1.7.1
-prometheus-client~=0.22.1
+prometheus-client~=0.23.1
 oauthlib~=3.3.1
 jsonpath-ng~=1.7.0
