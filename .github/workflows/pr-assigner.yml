@@ -12,4 +12,4 @@ permissions:
 
 jobs:
   pr-auto-assign:
-    uses: netcracker/qubership-workflow-hub/.github/workflows/re-pr-assigner.yml@main
+    uses: netcracker/qubership-workflow-hub/.github/workflows/re-pr-assigner.yml@3e428f45132119ce49d90f3770a45d4fe1d1078d # v2.0.4
