@@ -1,21 +1,7 @@
-# Copyright 2024-2025 NetCracker Technology Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
 
 import common.log as log
-from config.utils import str_to_bool, get_password
+from config.utils import get_password, str_to_bool
 
 logger = log.get_logger(__name__)
 
@@ -25,7 +11,8 @@ class LDAPConfig:
     def __init__(self, url, starttls, over_ssl, ca_cert_path, cert_path, key_path, insecure_skip_verify,
                  disable_referrals, basedn, filter, binddn,
                  plain_password, htpasswd, realm,
-                 requests_timeout):
+                 requests_timeout, technical_users_basic_auth="",
+                 technical_users_static_tokens="", technical_users_roles=""):
         self.url = url
         self.timeout = requests_timeout
         self.starttls = str_to_bool(starttls)
@@ -40,6 +27,11 @@ class LDAPConfig:
         self.binddn = binddn
         self.bind_password = get_password(plain_password, htpasswd)
         self.realm = realm
+
+        # Technical users configuration (store as strings for the handler to parse)
+        self.technical_users_basic_auth_str = technical_users_basic_auth
+        self.technical_users_static_tokens_str = technical_users_static_tokens
+        self.technical_users_roles_str = technical_users_roles
 
     def verify_config(self) -> bool:
         if self.url is None or not self.url:

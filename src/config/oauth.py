@@ -1,22 +1,8 @@
-# Copyright 2024-2025 NetCracker Technology Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
 from urllib.parse import urlparse
 
 import common.log as log
-from config.utils import get_http_url, str_to_bool, get_password
+from config.utils import get_http_url, get_password, str_to_bool
 
 logger = log.get_logger(__name__)
 
@@ -27,7 +13,8 @@ class OAuthConfig:
                  ca_cert_path, cert_path, key_path, insecure_skip_verify,
                  client_id, client_secret, htpasswd, scopes,
                  user_jsonpath, roles_jsonpath,
-                 requests_timeout):
+                 requests_timeout, technical_users_basic_auth="",
+                 technical_users_static_tokens="", technical_users_roles=""):
         self.host = host
         self.scheme = urlparse(self.host).scheme
         # URLs for OAuth protocol
@@ -59,6 +46,11 @@ class OAuthConfig:
         self.scopes = scopes
         self.user_jsonpath = user_jsonpath
         self.roles_jsonpath = roles_jsonpath
+
+        # Technical users configuration (store as strings for the handler to parse)
+        self.technical_users_basic_auth_str = technical_users_basic_auth
+        self.technical_users_static_tokens_str = technical_users_static_tokens
+        self.technical_users_roles_str = technical_users_roles
 
     def verify_config(self) -> bool:
         if self.scheme is None or not self.scheme or self.scheme not in ['http', 'https']:

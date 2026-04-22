@@ -1,39 +1,27 @@
-# Copyright 2024-2025 NetCracker Technology Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-import datetime
 import base64
+import logging
 import time
+import warnings
+from http.server import BaseHTTPRequestHandler
 from urllib.parse import urljoin
 
 import requests
+from ldap.filter import escape_filter_chars
+from urllib3.exceptions import InsecureRequestWarning
 
 import common.log as log
-import logging
-
-from ldap.filter import escape_filter_chars
-
-from http.cookies import SimpleCookie
-from http.server import BaseHTTPRequestHandler
-
 import common.session as session
 import common.vars as common_vars
 from common.graylog import graylog_handle
+from common.headers import HeaderHandler
 from config.common_config import CommonConfig
 from config.graylog import GraylogConfig
 from config.ldap import LDAPConfig
 from ldap_auth_handler.ldap_connector import ldap_auth_handle
+from basic_auth_handler import BasicAuthHandler, BasicAuthConfig
+
+# Suppress InsecureRequestWarning for development/testing environments
+warnings.filterwarnings('ignore', category=InsecureRequestWarning)
 
 logger = log.get_logger(__name__)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
@@ -83,69 +71,103 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
     def get_auth_cookie_exist(self) -> bool:
         return self.auth_cookie_exist
 
-    def get_cookie(self, name):
-        cookies = self.headers.get('Cookie')
-        if cookies:
-            auth_cookie = SimpleCookie(cookies).get(name)
-            if auth_cookie:
-                return auth_cookie.value
-            else:
-                return None
-        else:
-            return None
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize header_handler lazily to avoid issues during class setup
+        self._header_handler = None
 
-    @staticmethod
-    def set_cookie(cookie, cookie_name, cookie_value, max_age=3600, expires_hours=1):
-        cookie[cookie_name] = cookie_value
-        cookie[cookie_name]['path'] = '/'
-        cookie[cookie_name]['max-age'] = max_age
-        expires = datetime.datetime.utcnow() + datetime.timedelta(hours=expires_hours)
-        cookie[cookie_name]['expires'] = expires.strftime("%a, %d %b %Y %H:%M:%S GMT")
-        return cookie
+    def _ensure_header_handler(self):
+        """Ensure header_handler is initialized"""
+        if not hasattr(self, '_header_handler') or self._header_handler is None:
+            self._header_handler = self._get_header_handler()
+        return self._header_handler
+
+    @property
+    def header_handler(self):
+        """Lazy initialization of header handler"""
+        return self._ensure_header_handler()
+
+    def _get_header_handler(self):
+        """Get or create the header handler instance"""
+        # Check if class parameters are set before creating header handler
+        if not hasattr(self.__class__, 'common_params') or not hasattr(self.__class__, 'ldap_params') \
+                or not hasattr(self.__class__, 'graylog_params'):
+            raise RuntimeError(
+                "Header handler parameters not set."
+                " Call set_common_params(), set_auth_params(), and set_graylog_params() first.")
+        return HeaderHandler(
+            self,
+            self.get_common_params(),
+            self.get_auth_params(),
+            self.get_graylog_params())
+
+    def get_cookie(self, name):
+        return self.header_handler.get_cookie(name)
+
+    def set_cookie(self, cookie, cookie_name, cookie_value, max_age=None, expires_hours=None):
+        return self.header_handler.set_cookie(cookie, cookie_name, cookie_value, max_age, expires_hours)
+
+    def add_cors_headers(self):
+        return self.header_handler.add_cors_headers()
+
+    def add_cors_headers_with_cache(self):
+        return self.header_handler.add_cors_headers_with_cache()
+
+    def get_cors_origin_header(self):
+        return self.header_handler.get_cors_origin_header()
 
     def send_resp_headers(self, resp, cookies=None):
-        if cookies is not None:
-            for c in cookies:
-                c_key, c_value = str(cookies[c]).split(':', 1)
-                self.send_header(c_key, c_value.strip())
-        resp_headers = resp.headers
-        for key in resp_headers:
-            if key not in ['Content-Encoding', 'Transfer-Encoding', 'content-encoding',
-                           'transfer-encoding', 'content-length', 'Content-Length']:
-                self.send_header(key, resp_headers[key])
-        self.send_header('Content-Length', str(len(resp.content)))
-        self.end_headers()
+        return self.header_handler.send_resp_headers(resp, cookies)
 
     def parse_headers(self):
-        req_header = {}
-        for i, j in self.headers.items():
-            req_header[i] = j
-        req_header['X-Forwarded-For'] = common_vars.PROXY_CONTAINER_NAME
+        req_header = self.header_handler.parse_headers()
+        # LDAP-specific: remove Authorization headers
         if self.user != common_vars.DEFAULT_ADMIN_USER or 'sessions' in self.path:
             req_header.pop('Authorization', None)
             req_header.pop('authorization', None)
-            req_header['X-Forwarded-User'] = self.user
         return req_header
 
     def send_response_with_headers(self, resp):
-        self.send_response(resp.status_code)
-        if not self.auth_cookie_exist:
-            session_id = session.get_session_id_by_username(self.user)
-            if session_id is None:
-                session_id = session.create_new_session(self.user)
-            c = SimpleCookie()
-            # expires in 1 hour
-            c = self.set_cookie(c, self.common_params.cookie_name, session_id, max_age=3600, expires_hours=1)
-            self.send_resp_headers(resp, c)
-        else:
-            self.send_resp_headers(resp)
+        return self.header_handler.send_response_with_headers(resp)
 
     def auth_handle(self):
         logger.debug('Performing authorization')
+
+        # Periodically cleanup expired sessions
+        cleaned_count = session.cleanup_expired_sessions()
+        if cleaned_count > 0:
+            logger.debug(f"Cleaned up {cleaned_count} expired sessions")
+
         auth_header = self.headers.get('Authorization')
         auth_cookie = self.get_cookie(self.common_params.cookie_name)
         self.set_auth_cookie_exist(False)
 
+        # Try technical users authentication FIRST (highest priority)
+        if auth_header is not None and auth_header:
+            technical_users_config = BasicAuthConfig.from_strings(
+                self.ldap_params.technical_users_basic_auth_str,
+                self.ldap_params.technical_users_static_tokens_str,
+                self.ldap_params.technical_users_roles_str
+            )
+
+            technical_users_handler = BasicAuthHandler(
+                technical_users_config,
+                self.graylog_params,
+                self.common_params
+            )
+
+            result = technical_users_handler.handle_authentication(
+                auth_header,
+                self.set_user,
+                self.get_user
+            )
+
+            if result:
+                # Technical users bypass session management - no cookies, no sessions
+                logger.debug(f"Technical user {self.get_user()} authenticated, bypassing session management")
+                return True
+
+        # For non-technical users, try cookie-based authentication
         if auth_cookie is not None and auth_cookie != '':
             auth_header = session.get_username_by_session_id(auth_cookie)
             self.set_auth_cookie_exist(True)
@@ -158,6 +180,7 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
             # Continue request processing with username found by session ID
             return True
 
+        # Fall back to LDAP authentication
         if auth_header is None or not auth_header.lower().startswith('basic '):
             self.send_response(401)
             self.send_header('WWW-Authenticate', f'Basic realm="{self.ldap_params.realm}"')
@@ -199,6 +222,25 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
             logger.debug('Log in as default admin user: skip LDAP authentication')
         return True
 
+    def do_OPTIONS(self):
+        """Handle CORS preflight requests"""
+        logger.debug(f"Start OPTIONS handling: {self.path}")
+
+        # Check if this is a request that would trigger authentication
+        # if self.path == '/' or self.path.startswith('/search') or self.path.startswith('/api'):
+        #     # This could be a request that would trigger authentication
+        #     # Send CORS headers for preflight requests
+        #     self.send_response(200)
+        #     self.add_cors_headers_with_cache()
+        #     self.end_headers()
+        #     return
+
+        # For other paths, let the normal flow handle it
+        self.send_response(200)
+        self.add_cors_headers_with_cache()
+        self.end_headers()
+        return
+
     def do_HEAD(self):
         self.do_GET(body=False)
         return
@@ -213,13 +255,18 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
             # Successfully authenticated user
             logger.debug('Trying to proxy to Graylog')
             req_headers = self.parse_headers()
-            resp = requests.get(urljoin(self.graylog_params.url, self.path), headers=req_headers,
-                                verify=self.graylog_params.verify, cert=self.graylog_params.cert,
-                                timeout=self.graylog_params.timeout)
+            resp = requests.get(
+                urljoin(self.graylog_params.url, self.path),
+                headers=req_headers,
+                verify=self.graylog_params.verify,
+                cert=self.graylog_params.cert,
+                timeout=self.graylog_params.timeout,
+                stream=True
+            )
             self.send_response_with_headers(resp)
-            msg = resp.text
             if body:
-                self.wfile.write(msg.encode(encoding='UTF-8', errors='strict'))
+                # Use resp.content instead of resp.text to avoid corrupting binary files
+                self.wfile.write(resp.content)
         except Exception as e:
             self.auth_failed(str(e))
         current_exec_time = time.time() - start_time
@@ -239,9 +286,14 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
             content_len = int(self.headers.get('content-length', 0))
             post_body = self.rfile.read(content_len)
             req_headers = self.parse_headers()
-            resp = requests.post(urljoin(self.graylog_params.url, self.path), headers=req_headers, data=post_body,
-                                 verify=self.graylog_params.verify, cert=self.graylog_params.cert,
-                                 timeout=self.graylog_params.timeout)
+            resp = requests.post(
+                urljoin(self.graylog_params.url, self.path),
+                headers=req_headers, data=post_body,
+                verify=self.graylog_params.verify,
+                cert=self.graylog_params.cert,
+                timeout=self.graylog_params.timeout,
+                stream=True
+            )
             self.send_response_with_headers(resp)
             self.wfile.write(resp.content)
         except Exception as e:
@@ -263,9 +315,14 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
             content_len = int(self.headers.get('content-length', 0))
             put_body = self.rfile.read(content_len)
             req_headers = self.parse_headers()
-            resp = requests.put(urljoin(self.graylog_params.url, self.path), headers=req_headers, data=put_body,
-                                verify=self.graylog_params.verify, cert=self.graylog_params.cert,
-                                timeout=self.graylog_params.timeout)
+            resp = requests.put(
+                urljoin(self.graylog_params.url, self.path),
+                headers=req_headers, data=put_body,
+                verify=self.graylog_params.verify,
+                cert=self.graylog_params.cert,
+                timeout=self.graylog_params.timeout,
+                stream=True
+            )
             self.send_response_with_headers(resp)
             self.wfile.write(resp.content)
         except Exception as e:
@@ -287,9 +344,12 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
             content_len = int(self.headers.get('content-length', 0))
             delete_body = self.rfile.read(content_len)
             req_headers = self.parse_headers()
-            resp = requests.delete(urljoin(self.graylog_params.url, self.path), headers=req_headers, data=delete_body,
-                                   verify=self.graylog_params.verify, cert=self.graylog_params.cert,
-                                   timeout=self.graylog_params.timeout)
+            resp = requests.delete(
+                urljoin(self.graylog_params.url, self.path), headers=req_headers, data=delete_body,
+                verify=self.graylog_params.verify,
+                cert=self.graylog_params.cert,
+                timeout=self.graylog_params.timeout,
+                stream=True)
             self.send_response_with_headers(resp)
             self.wfile.write(resp.content)
         except Exception as e:

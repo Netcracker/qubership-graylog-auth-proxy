@@ -1,17 +1,3 @@
-# Copyright 2024-2025 NetCracker Technology Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
 import signal
 import ssl
@@ -28,15 +14,14 @@ from config.common_config import CommonConfig
 from config.graylog import GraylogConfig
 from config.ldap import LDAPConfig
 from config.oauth import OAuthConfig
-from ldap_auth_handler.password_rotation import rotate_passwords_in_graylog
 from ldap_auth_handler.handler import LDAPAuthHandler
+from ldap_auth_handler.password_rotation import rotate_passwords_in_graylog
 from oauth_handler.handler import OAuthHandler
 
 if not hasattr(__builtins__, "basestring"):
     basestring = (str, bytes)
 
 import threading
-
 from socketserver import ThreadingMixIn
 
 AUTH_TYPE_LDAP = 'ldap'
@@ -79,7 +64,8 @@ if __name__ == '__main__':
     parser.add_argument('--auth-type',
                         required=True,
                         choices=[AUTH_TYPE_LDAP, AUTH_TYPE_OAUTH],
-                        help="Defines which type of authentication protocol will be chosen (LDAP or OAuth 2.0)")
+                        help="Defines which type of authentication protocol will be chosen (LDAP or OAuth 2.0). "
+                             "LDAP and OAuth2 are mutually exclusive. Basic Auth for technical users works with both.")
     # Group for common options
     group = parser.add_argument_group("Common options")
     group.add_argument('--log-level', metavar="log_level",
@@ -98,6 +84,24 @@ if __name__ == '__main__':
                        default="", help="Path to private key file for proxy HTTP server")
     group.add_argument('--cookie', metavar="cookiename",
                        default="authproxy", help="HTTP cookie name to set in")
+    group.add_argument('--domain', metavar="domain",
+                       default="*", help="Domain for CORS Access-Control-Allow-Origin header (use '*' for all domains)")
+    group.add_argument('--access-control-max-age', metavar="access_control_max_age",
+                       type=int,
+                       default=86400,
+                       help="Max age for CORS preflight requests in seconds (default: 86400 = 24 hours)")
+    group.add_argument('--cookie-max-age', metavar="cookie_max_age",
+                       type=int,
+                       default=86400,
+                       help="Max age for session cookies in seconds (default: 86400 = 24 hours)")
+    group.add_argument('--cookie-expires-hours', metavar="cookie_expires_hours",
+                       type=float,
+                       default=24.0,
+                       help="Cookie expiration time in hours (default: 24.0 hours)")
+    group.add_argument('--session-expiration-time', metavar="session_expiration_time",
+                       type=int,
+                       default=86400,
+                       help="Session expiration time in seconds (default: 86400 = 24 hours)")
     group.add_argument('--requests-timeout', metavar='requests_timeout',
                        type=float,
                        default=30,
@@ -140,6 +144,7 @@ if __name__ == '__main__':
     group.add_argument('--stream-mapping', metavar='stream_mapping',
                        default='',
                        help="Filter for sharing Graylog streams between LDAP and Graylog users by memberOf field")
+
     group.add_argument('--graylog-pre-created-users', metavar='graylog_pre_created_users',
                        default='admin,auditViewer,operator,telegraf_operator,graylog-sidecar,graylog_api_th_user',
                        help="Comma separated pre-created users in Graylog for which you do not need "
@@ -213,6 +218,24 @@ if __name__ == '__main__':
                             "from the JSON returned from OAuth2 server by using userinfo path. "
                             "Configured for Keycloak server by default")
 
+    # Technical users options (Basic Auth and Static Tokens)
+    group = parser.add_argument_group(title="Technical users options")
+    group.add_argument('--technical-users-basic-auth', metavar="technical_users_basic_auth",
+                       default='',
+                       help="Comma-separated list of technical users allowed to use Basic Auth "
+                            "in format 'username:password,username2:password2'. "
+                            "These users bypass OAuth flow and can authenticate directly.")
+    group.add_argument('--technical-users-static-tokens', metavar="technical_users_static_tokens",
+                       default='',
+                       help="Comma-separated list of technical users with static tokens "
+                            "in format 'username:token,username2:token2'. "
+                            "These users can authenticate using Authorization: Bearer <token> header.")
+    group.add_argument('--technical-users-roles', metavar="technical_users_roles",
+                       default='',
+                       help="Comma-separated list of roles assigned to technical users "
+                            "in format 'username:role1,role2;username2:role1'. "
+                            "If not specified, technical users get default roles.")
+
     # Auth provider TLS options
     group.add_argument('--auth-tls-insecure-skip-verify', metavar="auth_tls_insecure_skip_verify",
                        default="false",
@@ -240,9 +263,18 @@ if __name__ == '__main__':
                                  args.proxy_tls_enabled,
                                  args.proxy_tls_cert_file,
                                  args.proxy_tls_key_file,
-                                 args.cookie)
+                                 args.cookie,
+                                 args.domain,
+                                 args.access_control_max_age,
+                                 args.cookie_max_age,
+                                 args.cookie_expires_hours,
+                                 args.session_expiration_time)
     if not common_config.verify_config():
         sys.exit(1)
+
+    # Configure session expiration time from config
+    import common.session as session
+    session.set_session_expiration_time(common_config.session_expiration_time)
     graylog_config = GraylogConfig(args.graylog_host,
                                    args.graylog_tls_ca_file,
                                    args.graylog_tls_cert_file,
@@ -270,7 +302,10 @@ if __name__ == '__main__':
                                  args.bindpw,
                                  args.htpasswd,
                                  args.http_realm,
-                                 args.requests_timeout)
+                                 args.requests_timeout,
+                                 args.technical_users_basic_auth,
+                                 args.technical_users_static_tokens,
+                                 args.technical_users_roles)
         handler = LDAPAuthHandler
         if not auth_config.verify_config():
             sys.exit(1)
@@ -295,7 +330,10 @@ if __name__ == '__main__':
                                   args.oauth_scopes,
                                   args.oauth_user_jsonpath,
                                   args.oauth_roles_jsonpath,
-                                  args.requests_timeout)
+                                  args.requests_timeout,
+                                  args.technical_users_basic_auth,
+                                  args.technical_users_static_tokens,
+                                  args.technical_users_roles)
         handler = OAuthHandler
         if not auth_config.verify_config():
             sys.exit(1)
@@ -314,8 +352,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, exit_handler)
 
     logger.info(f"Start listening on {common_config.proxy_host}:{common_config.proxy_port}...")
-    logger.info(f"Prometheus metrics are available on "
-                f"{common_config.proxy_host}:{common_config.proxy_metrics_port}...")
+    logger.info(f"Prometheus metrics are available on"
+                f" {common_config.proxy_host}:{common_config.proxy_metrics_port}...")
     start_http_server(addr=common_config.proxy_host, port=common_config.proxy_metrics_port)
     sys.stdout.flush()
     server.serve_forever()

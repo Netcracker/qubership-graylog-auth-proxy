@@ -1,33 +1,42 @@
-# Copyright 2024-2025 NetCracker Technology Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from jinja2 import Environment, select_autoescape, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from prometheus_client import Histogram
 
 TEMPLATES_ENV = Environment(
     loader=FileSystemLoader("templates"),
     autoescape=select_autoescape()
 )
+
+# Default admin user
 DEFAULT_ADMIN_USER = 'admin'
+
+# Default roles
 DEFAULT_ROLES = []
+
+# Proxy container name
 PROXY_CONTAINER_NAME = 'graylog_auth_proxy'
 
+# Prometheus metrics
 GET_REQUEST_DURATION = Histogram('get_requests_duration', 'GET requests response time in seconds')
 POST_REQUEST_DURATION = Histogram('post_requests_duration', 'POST requests response time in seconds')
 PUT_REQUEST_DURATION = Histogram('put_requests_duration', 'PUT requests response time in seconds')
 DELETE_REQUEST_DURATION = Histogram('delete_requests_duration', 'DELETE requests response time in seconds')
 
+# Graylog API endpoints
 GRAYLOG_API_USERS = '/api/users/'
 GRAYLOG_API_STREAMS = '/api/streams/'
 GRAYLOG_API_USERS_ID = '/api/users/id/'
+
+# Max age for CORS preflight requests
+ACCESS_CONTROL_MAX_AGE = 86400  # 24 hours
+
+# Max age for cookies
+COOKIE_MAX_AGE = 86400  # 24 hours
+COOKIE_EXPIRES_HOURS = 24  # 24 hours
+
+# Session expiration time
+SESSION_EXPIRATION_TIME = 86400  # 24 hours
+
+# Priority for role and stream mapping
+# Any random number bigger than 127 will do
+PRIORITY_ROLE_MAX = 127
+PRIORITY_STREAM_MAX = 127

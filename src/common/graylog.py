@@ -1,25 +1,10 @@
-# Copyright 2024-2025 NetCracker Technology Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import json
+import secrets
 
 import requests
 
 import common.log as log
 import common.vars as common_vars
-import secrets
-
 from common import mapping, stream_sharing
 from config.graylog import GraylogConfig
 
@@ -41,8 +26,8 @@ def graylog_handle(params: GraylogConfig, member_of, user):
     roles = []
     streams = []
     if len(member_of) > 0:
-        priority_role = 127  # just a big number
-        priority_stream = 127  # just a big number
+        priority_role = common_vars.PRIORITY_ROLE_MAX  # just a big number
+        priority_stream = common_vars.PRIORITY_STREAM_MAX  # just a big number
         for m_elem in member_of:
             member_of_decoded = m_elem
             if type(m_elem) is bytes or type(m_elem) is bytearray:
