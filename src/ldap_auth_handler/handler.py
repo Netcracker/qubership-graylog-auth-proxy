@@ -71,6 +71,13 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
     def get_auth_cookie_exist(self) -> bool:
         return self.auth_cookie_exist
 
+    @classmethod
+    def set_technical_user_authenticated(cls, value: bool):
+        cls._technical_user_authenticated = value
+
+    def get_technical_user_authenticated(self) -> bool:
+        return getattr(self, '_technical_user_authenticated', False)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Initialize header_handler lazily to avoid issues during class setup
@@ -141,6 +148,7 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
         auth_header = self.headers.get('Authorization')
         auth_cookie = self.get_cookie(self.common_params.cookie_name)
         self.set_auth_cookie_exist(False)
+        self.set_technical_user_authenticated(False)
 
         # Try technical users authentication FIRST (highest priority)
         if auth_header is not None and auth_header:
@@ -163,7 +171,8 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
             )
 
             if result:
-                # Technical users bypass session management - no cookies, no sessions
+                # Technical users bypass session management and LDAP auth
+                self.set_technical_user_authenticated(True)
                 logger.debug(f"Technical user {self.get_user()} authenticated, bypassing session management")
                 return True
 
@@ -210,6 +219,9 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
         if not self.auth_handle():
             # request already processed, auth wasn't successful
             return False
+        # Technical users already authenticated and handled Graylog in BasicAuthHandler
+        if self.get_technical_user_authenticated():
+            return True
         # LDAP auth, creating/updating of users and sharing of streams happen only for the first time in a session
         # and only for not a default Graylog admin user
         if self.user != common_vars.DEFAULT_ADMIN_USER and not self.auth_cookie_exist:

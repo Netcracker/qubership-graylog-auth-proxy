@@ -177,7 +177,7 @@ class OAuthHandler(BaseHTTPRequestHandler):
                 logger.debug(f"Technical user {self.get_user()} authenticated, bypassing session management")
                 return True
             else:
-                logger.debug(f"Technical user authentication failed for header: {auth_header[:20]}...")
+                logger.debug("Technical user authentication failed, trying other auth methods")
 
                 # Check if this is the admin user trying to authenticate with standard Basic Auth
                 # Admin user should bypass OAuth and authenticate directly with Graylog

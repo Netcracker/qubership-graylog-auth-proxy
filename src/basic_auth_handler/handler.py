@@ -1,4 +1,5 @@
 import base64
+import hmac
 from typing import Dict, List
 
 import common.log as log
@@ -116,7 +117,7 @@ class BasicAuthHandler:
             user, password = auth_decoded.split(':', 1)
 
             # Check if user is in technical users list
-            if user in self.config.basic_auth_users and self.config.basic_auth_users[user] == password:
+            if user in self.config.basic_auth_users and hmac.compare_digest(self.config.basic_auth_users[user], password):
                 logger.debug(f'Technical user authenticated via Basic Auth: {user}')
                 set_user_callback(user)
 
@@ -147,7 +148,7 @@ class BasicAuthHandler:
 
             # Check if token matches any technical user
             for username, user_token in self.config.static_token_users.items():
-                if user_token == token:
+                if hmac.compare_digest(user_token, token):
                     logger.debug(f'Technical user authenticated via static token: {username}')
                     set_user_callback(username)
 
