@@ -1,0 +1,8 @@
+# MD013/line-length - Line length
+MD013:
+  line_length: 120
+  tables: false
+# MD060/Table column style - Allow any style and aligned delimiters
+MD060:
+  style: any
+  aligned_delimiter: true

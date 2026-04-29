@@ -48,7 +48,7 @@ flowchart LR
 ## How it works
 
 During working process graylog-auth-proxy connects to an SSO provider and handles all requests that are going to the
-Graylog server. If user wants to access to the Graylog UI via the proxy, he/she needs to enter credentials for a user
+Graylog server. If user wants to access to the Graylog UI via the proxy, they needs to enter credentials for a user
 from SSO provider. Then the proxy verifies these creds and adds user with the same username and random password
 to Graylog and gives him the rights (attaches roles and shares several streams) based on the proxy configuration and
 some attributes of the user from SSO provider. If the user is already exist in the Graylog, graylog-auth-proxy tries
@@ -251,7 +251,7 @@ LDAP options:
 | --base-dn, -b       | LDAP base DN                                                                | -                      |
 | --bind-dn, -D       | LDAP bind DN                                                                | -                      |
 | --bind-password, -w | LDAP password for the bind DN                                               | -                      |
-| --htpasswd          | Path to `htpasswd` file with LDAP password for the bind DN in Base64 format | -                      |
+| --htpasswd          | Path to `htpasswd` file with LDAP password for the bind DN in base64 format | -                      |
 | --filter, -f        | LDAP filter                                                                 | `(cn=%(username)s)`    |
 <!-- markdownlint-enable line-length -->
 
@@ -281,10 +281,10 @@ OAuth options:
 | --oauth-authorization-path | This path will be used to build URL for redirection to OAuth2 authorization server login page                                                                                                                                           |                              |
 | --oauth-token-path         | This path will be used to build URL for getting auth token from OAuth2 authorization server                                                                                                                                             |                              |
 | --oauth-userinfo-path      | This path will be used to build URL for getting information about current user from OAuth2 authorization server to get username and entities (roles, groups, etc.) for Graylog roles and streams mapping                                |                              |
-| --oauth-redirect-uri       | URI to redirect after successful logging in on OAuth2 authorization server side                                                                                                                                                         | `http://localhost:8888/code` |
+| --oauth-redirect-uri       | URI to redirect after successful logging in on OAuth2 authorization server-side                                                                                                                                                         | `http://localhost:8888/code` |
 | --oauth-client-id          | OAuth2 Client ID for the proxy                                                                                                                                                                                                          |                              |
 | --oauth-client-secret      | OAuth2 Client Secret for the proxy                                                                                                                                                                                                      |                              |
-| --oauth-htpasswd           | Path to htpasswd file with Client Secret for the OAuth2 protocol in Base64 format                                                                                                                                                       |                              |
+| --oauth-htpasswd           | Path to htpasswd file with Client Secret for the OAuth2 protocol in base64 format                                                                                                                                                       |                              |
 | --oauth-scopes             | OAuth2 scopes for the proxy separated by spaces. Configured for Keycloak server by default                                                                                                                                              | `openid profile roles`       |
 | --oauth-user-jsonpath      | JSONPath (by jsonpath-ng) for taking username from the JSON returned from OAuth2 server by using userinfo path. Configured for Keycloak server by default                                                                               | `preferred_username`         |
 | --oauth-roles-jsonpath     | JSONPath (by jsonpath-ng) for taking information about entities (roles, groups, etc.) for Graylog roles and streams mapping from the JSON returned from OAuth2 server by using userinfo path. Configured for Keycloak server by default | `realm_access.roles[*]`      |
@@ -293,11 +293,11 @@ OAuth options:
 Technical users options (works with both LDAP and OAuth):
 
 <!-- markdownlint-disable line-length -->
-| Flag                              | Description                                                                                                                                                                                           | Default | Example                                                |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
-| --technical-users-basic-auth      | Comma-separated list of technical users with Basic Auth credentials in format `username:password,username2:password2`. These users can authenticate using standard HTTP Basic Authentication.        |         | `monitoring:secret123,backup:pass456`                  |
-| --technical-users-static-tokens   | Comma-separated list of technical users with static bearer tokens in format `username:token,username2:token2`. These users can authenticate using `Authorization: Bearer <token>` header.            |         | `api-client:abc123def456,telegraf:xyz789`              |
-| --technical-users-roles           | Comma-separated list of Graylog roles assigned to technical users in format `username:role1,role2;username2:role3`. Use semicolons to separate users, commas to separate roles for the same user.   |         | `monitoring:Reader;api-client:Admin;backup:Reader,Admin` |
+| Flag                              | Description                                                                                                                                                                                       | Default | Example                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------- |
+| --technical-users-basic-auth      | Comma-separated list of technical users with Basic Auth credentials in format `username:password,username2:password2`. These users can authenticate using standard HTTP Basic Authentication.     |         | `monitoring:secret123,backup:pass456`                    |
+| --technical-users-static-tokens   | Comma-separated list of technical users with static bearer tokens in format `username:token,username2:token2`. These users can authenticate using `Authorization: Bearer <token>` header.         |         | `api-client:abc123def456,telegraf:xyz789`                |
+| --technical-users-roles           | Comma-separated list of Graylog roles assigned to technical users in format `username:role1,role2;username2:role3`. Use semicolons to separate users, commas to separate roles for the same user. |         | `monitoring:Reader;api-client:Admin;backup:Reader,Admin` |
 <!-- markdownlint-enable line-length -->
 
 Auth provider TLS options (TLS configuration for both LDAP and OAuth):
@@ -331,9 +331,9 @@ curl -H "Authorization: Bearer <token>" https://graylog.example.com/api/system/m
 
 ### Local build
 
-To build the docker container locally, you need:
+To build the Docker container locally, you need:
 
-* docker
+* Docker
 
 To execute build just run the command:
 
@@ -384,7 +384,7 @@ make install
 ```
 
 Next, to run `graylog-auth-proxy` you need the config file or set parameters using the CLI args.
-You can copy config file fro examples and next fill it:
+You can copy config file from examples and next fill it:
 
 ```bash
 mkdir test/
