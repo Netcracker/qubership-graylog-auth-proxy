@@ -71,14 +71,14 @@ class LDAPAuthHandler(BaseHTTPRequestHandler):
     def get_auth_cookie_exist(self) -> bool:
         return self.auth_cookie_exist
 
-    @classmethod
-    def set_technical_user_authenticated(cls, value: bool):
-        cls._technical_user_authenticated = value
+    def set_technical_user_authenticated(self, value: bool):
+        self._technical_user_authenticated = value
 
     def get_technical_user_authenticated(self) -> bool:
-        return getattr(self, '_technical_user_authenticated', False)
+        return self._technical_user_authenticated
 
     def __init__(self, *args, **kwargs):
+        self._technical_user_authenticated = False
         super().__init__(*args, **kwargs)
         # Initialize header_handler lazily to avoid issues during class setup
         self._header_handler = None
