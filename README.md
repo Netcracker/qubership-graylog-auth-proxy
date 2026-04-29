@@ -318,13 +318,13 @@ You can set each parameter that has a non-short flag at the config file (except 
 Basic Auth:
 
 ```bash
-curl -u monitoring:secret123 https://graylog.example.com/api/system/metrics
+curl -u <username>:<password> https://graylog.example.com/api/system/metrics
 ```
 
 Bearer Token:
 
 ```bash
-curl -H "Authorization: Bearer abc123def456" https://graylog.example.com/api/system/metrics
+curl -H "Authorization: Bearer <token>" https://graylog.example.com/api/system/metrics
 ```
 
 ## Build

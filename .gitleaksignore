@@ -1,2 +1,5 @@
 /tmp/lint/docs/installation.md:private-key:660
 /github/workspace/docs/installation.md:private-key:660
+# Fake test credentials — not real secrets
+/github/workspace/tests/test_oauth_handler.py:generic-api-key:545
+/github/workspace/tests/test_technical_users_handler.py:generic-api-key:75
