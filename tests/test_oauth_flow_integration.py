@@ -11,8 +11,12 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from oauth_handler.oauth_connector import (
-    create_oauth_state, check_state, get_oauth_session_data,
-    clear_oauth_session, store_oauth_session_data, OAuthHTTPClient
+    create_oauth_state,
+    check_state,
+    get_oauth_session_data,
+    clear_oauth_session,
+    store_oauth_session_data,
+    OAuthHTTPClient,
 )
 
 
@@ -58,15 +62,15 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         store_oauth_session_data(session_data)
 
         # Verify state is stored correctly
-        self.assertEqual(session_data.get('state'), state)
-        self.assertEqual(session_data.get('user_session_id'), "user_session_123")
+        self.assertEqual(session_data.get("state"), state)
+        self.assertEqual(session_data.get("user_session_id"), "user_session_123")
 
         # Step 2: Simulate callback in different thread
         def callback_thread():
             """Simulate OAuth callback handling in different thread"""
             # Clear thread-local data to simulate different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Validate the state parameter
             is_valid = check_state(state)
@@ -74,8 +78,10 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
             # Get session data that was moved to this thread
             callback_session_data = get_oauth_session_data()
-            self.assertEqual(callback_session_data.get('state'), state)
-            self.assertEqual(callback_session_data.get('user_session_id'), "user_session_123")
+            self.assertEqual(callback_session_data.get("state"), state)
+            self.assertEqual(
+                callback_session_data.get("user_session_id"), "user_session_123"
+            )
 
             return True
 
@@ -98,7 +104,7 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create a state and manually expire it
         expired_state = create_oauth_state("expired_session")
         session_data = get_oauth_session_data()
-        session_data['created_at'] = time.time() - 400  # 400 seconds ago (expired)
+        session_data["created_at"] = time.time() - 400  # 400 seconds ago (expired)
         store_oauth_session_data(session_data)
 
         # Try to validate the expired state
@@ -117,8 +123,8 @@ class TestOAuthFlowIntegration(unittest.TestCase):
             store_oauth_session_data(session_data)
 
             # Simulate callback in different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Validate state
             is_valid = check_state(state)
@@ -137,48 +143,58 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
         # Check results
         successful_flows = sum(results)
-        self.assertEqual(successful_flows, len(results),
-                         f"All {len(results)} concurrent flows should succeed, but only {successful_flows} did")
+        self.assertEqual(
+            successful_flows,
+            len(results),
+            f"All {len(results)} concurrent flows should succeed, but only {successful_flows} did",
+        )
 
     def test_oauth_client_integration(self):
         """Test OAuth client integration with state management"""
         oauth_client = OAuthHTTPClient(self.oauth_config)
 
         # Test login method creates state
-        with patch('oauthlib.oauth2.WebApplicationClient') as mock_client:
+        with patch("oauthlib.oauth2.WebApplicationClient") as mock_client:
             mock_client_instance = MagicMock()
             mock_client.return_value = mock_client_instance
-            mock_client_instance.prepare_request_uri.return_value = "https://keycloak.example.com/auth?state=test&client_id=test"
+            mock_client_instance.prepare_request_uri.return_value = (
+                "https://keycloak.example.com/auth?state=test&client_id=test"
+            )
 
             redirect_url = oauth_client.login("user_session_456")
             self.assertIsNotNone(redirect_url)
 
             # Verify state was created
             session_data = get_oauth_session_data()
-            self.assertIsNotNone(session_data.get('state'))
-            self.assertEqual(session_data.get('user_session_id'), "user_session_456")
+            self.assertIsNotNone(session_data.get("state"))
+            self.assertEqual(session_data.get("user_session_id"), "user_session_456")
 
     def test_token_exchange_with_state(self):
         """Test token exchange with proper state management"""
         # Create state first
         state = create_oauth_state("user_session_789")
         session_data = get_oauth_session_data()
-        session_data['redirect_uri'] = "http://localhost:8888/callback"
+        session_data["redirect_uri"] = "http://localhost:8888/callback"
         store_oauth_session_data(session_data)
 
         oauth_client = OAuthHTTPClient(self.oauth_config)
 
         # Test token exchange
-        with patch('requests.post') as mock_post:
+        with patch("requests.post") as mock_post:
             # Mock successful token response
             mock_response = MagicMock()
             mock_response.status_code = 200
-            mock_response.text = '{"access_token": "test_access_token", "token_type": "Bearer"}'
-            mock_response.json = lambda: {"access_token": "test_access_token", "token_type": "Bearer"}
+            mock_response.text = (
+                '{"access_token": "test_access_token", "token_type": "Bearer"}'
+            )
+            mock_response.json = lambda: {
+                "access_token": "test_access_token",
+                "token_type": "Bearer",
+            }
             mock_post.return_value = mock_response
 
             # Mock WebApplicationClient for token parsing
-            with patch('oauthlib.oauth2.WebApplicationClient') as mock_client:
+            with patch("oauthlib.oauth2.WebApplicationClient") as mock_client:
                 mock_client_instance = MagicMock()
                 mock_client.return_value = mock_client_instance
                 mock_client_instance.token = {"access_token": "test_access_token"}
@@ -191,13 +207,13 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         """Test user info retrieval with proper state management"""
         oauth_client = OAuthHTTPClient(self.oauth_config)
 
-        with patch('requests.get') as mock_get:
+        with patch("requests.get") as mock_get:
             # Mock successful user info response
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json = lambda: {
                 "preferred_username": "test_user",
-                "realm_access": {"roles": ["user", "admin"]}
+                "realm_access": {"roles": ["user", "admin"]},
             }
             mock_get.return_value = mock_response
 
@@ -241,8 +257,8 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Test retrieval in different thread
         def retrieval_thread():
             # Clear thread-local data
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Try to retrieve state
             is_valid = check_state(state)
@@ -250,8 +266,10 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
             # Verify session data was moved to this thread
             thread_session_data = get_oauth_session_data()
-            self.assertEqual(thread_session_data.get('state'), state)
-            self.assertEqual(thread_session_data.get('user_session_id'), "user_session_cross_thread")
+            self.assertEqual(thread_session_data.get("state"), state)
+            self.assertEqual(
+                thread_session_data.get("user_session_id"), "user_session_cross_thread"
+            )
 
         # Run retrieval in separate thread
         thread = threading.Thread(target=retrieval_thread)
@@ -266,17 +284,17 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create OAuth state and store original URL
         state = create_oauth_state("user_session_redirect_test")
         session_data = get_oauth_session_data()
-        session_data['original_request_url'] = original_url
+        session_data["original_request_url"] = original_url
         store_oauth_session_data(session_data)
 
         # Verify original URL is stored
-        self.assertEqual(session_data.get('original_request_url'), original_url)
+        self.assertEqual(session_data.get("original_request_url"), original_url)
 
         # Simulate callback in different thread
         def callback_thread():
             # Clear thread-local data to simulate different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Validate the state parameter
             is_valid = check_state(state)
@@ -284,8 +302,10 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
             # Get session data that was moved to this thread
             callback_session_data = get_oauth_session_data()
-            self.assertEqual(callback_session_data.get('state'), state)
-            self.assertEqual(callback_session_data.get('original_request_url'), original_url)
+            self.assertEqual(callback_session_data.get("state"), state)
+            self.assertEqual(
+                callback_session_data.get("original_request_url"), original_url
+            )
 
             return True
 
@@ -305,14 +325,14 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create OAuth state and store original URL
         state = create_oauth_state("user_session_redirect_test")
         session_data = get_oauth_session_data()
-        session_data['original_request_url'] = original_url
+        session_data["original_request_url"] = original_url
         store_oauth_session_data(session_data)
 
         # Simulate successful authentication callback
         def authentication_callback():
             # Clear thread-local data to simulate different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Validate state (simulates successful OAuth callback)
             is_valid = check_state(state)
@@ -320,7 +340,7 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
             # Get session data
             callback_session_data = get_oauth_session_data()
-            preserved_url = callback_session_data.get('original_request_url')
+            preserved_url = callback_session_data.get("original_request_url")
 
             # Verify original URL is preserved
             self.assertEqual(preserved_url, original_url)
@@ -343,17 +363,17 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create OAuth state and store original URL
         state = create_oauth_state("user_session_next_test")
         session_data = get_oauth_session_data()
-        session_data['original_request_url'] = original_url
+        session_data["original_request_url"] = original_url
         store_oauth_session_data(session_data)
 
         # Verify original URL is stored
-        self.assertEqual(session_data.get('original_request_url'), original_url)
+        self.assertEqual(session_data.get("original_request_url"), original_url)
 
         # Simulate callback with explicit next parameter
         def callback_with_explicit_next():
             # Clear thread-local data to simulate different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Validate the state parameter
             is_valid = check_state(state)
@@ -361,14 +381,16 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
             # Get session data that was moved to this thread
             callback_session_data = get_oauth_session_data()
-            self.assertEqual(callback_session_data.get('state'), state)
-            self.assertEqual(callback_session_data.get('original_request_url'), original_url)
+            self.assertEqual(callback_session_data.get("state"), state)
+            self.assertEqual(
+                callback_session_data.get("original_request_url"), original_url
+            )
 
             # Simulate the redirect logic
             next_url = "/dashboard"  # Explicit next parameter
-            if next_url == '/':
+            if next_url == "/":
                 # This should NOT execute because next_url != '/'
-                original_request = callback_session_data.get('original_request_url')
+                original_request = callback_session_data.get("original_request_url")
                 if original_request:
                     next_url = original_request
 
@@ -394,14 +416,14 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create OAuth state and store original URL
         state = create_oauth_state("user_session_implicit_test")
         session_data = get_oauth_session_data()
-        session_data['original_request_url'] = original_url
+        session_data["original_request_url"] = original_url
         store_oauth_session_data(session_data)
 
         # Simulate callback without explicit next parameter
         def callback_without_explicit_next():
             # Clear thread-local data to simulate different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Validate the state parameter
             is_valid = check_state(state)
@@ -412,9 +434,9 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
             # Simulate the redirect logic
             next_url = "/"  # Default (no explicit next parameter)
-            if next_url == '/':
+            if next_url == "/":
                 # This SHOULD execute because next_url == '/'
-                original_request = callback_session_data.get('original_request_url')
+                original_request = callback_session_data.get("original_request_url")
                 if original_request:
                     next_url = original_request
 
@@ -439,17 +461,17 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create OAuth state
         state = create_oauth_state("user_session_cookie_test")
         session_data = get_oauth_session_data()
-        session_data['original_request_url'] = "/search"
+        session_data["original_request_url"] = "/search"
         store_oauth_session_data(session_data)
 
         # Mock the OAuth callback with successful authentication
-        with patch('requests.post') as mock_post, patch('requests.get') as mock_get:
+        with patch("requests.post") as mock_post, patch("requests.get") as mock_get:
             # Mock token exchange
             mock_token_response = MagicMock()
             mock_token_response.status_code = 200
             mock_token_response.json = lambda: {
                 "access_token": "test_access_token",
-                "token_type": "Bearer"
+                "token_type": "Bearer",
             }
             mock_post.return_value = mock_token_response
 
@@ -458,15 +480,15 @@ class TestOAuthFlowIntegration(unittest.TestCase):
             mock_user_response.status_code = 200
             mock_user_response.json = lambda: {
                 "preferred_username": "test_user",
-                "realm_access": {"roles": ["user", "admin"]}
+                "realm_access": {"roles": ["user", "admin"]},
             }
             mock_get.return_value = mock_user_response
 
             # Simulate the OAuth callback processing
             def simulate_oauth_callback():
                 # Clear thread-local data to simulate different thread
-                if hasattr(threading.current_thread(), '_oauth_session_data'):
-                    delattr(threading.current_thread(), '_oauth_session_data')
+                if hasattr(threading.current_thread(), "_oauth_session_data"):
+                    delattr(threading.current_thread(), "_oauth_session_data")
 
                 # Validate state
                 is_valid = check_state(state)
@@ -497,14 +519,14 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create OAuth state and store original URL
         state = create_oauth_state("user_session_persistence_test")
         session_data = get_oauth_session_data()
-        session_data['original_request_url'] = original_url
+        session_data["original_request_url"] = original_url
         store_oauth_session_data(session_data)
 
         # Simulate the complete OAuth flow
         def simulate_complete_oauth_flow():
             # Clear thread-local data to simulate different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Step 1: Validate state (simulates callback)
             is_valid = check_state(state)
@@ -512,7 +534,9 @@ class TestOAuthFlowIntegration(unittest.TestCase):
 
             # Step 2: Get session data
             callback_session_data = get_oauth_session_data()
-            self.assertEqual(callback_session_data.get('original_request_url'), original_url)
+            self.assertEqual(
+                callback_session_data.get("original_request_url"), original_url
+            )
 
             # Step 3: Simulate successful authentication and session creation
             # (In real code, this would create a session and set cookies)
@@ -531,7 +555,9 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         thread.join()
 
         # Verify the flow completed successfully
-        self.assertTrue(True, "OAuth flow with session persistence should work correctly")
+        self.assertTrue(
+            True, "OAuth flow with session persistence should work correctly"
+        )
 
     def test_redirect_logic_prioritizes_original_request(self):
         """Test that redirect logic prioritizes original request URL over callback path"""
@@ -541,14 +567,14 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         # Create OAuth state and store original URL
         state = create_oauth_state("user_session_redirect_logic_test")
         session_data = get_oauth_session_data()
-        session_data['original_request_url'] = original_url
+        session_data["original_request_url"] = original_url
         store_oauth_session_data(session_data)
 
         # Simulate the redirect logic from callback context
         def simulate_redirect_logic():
             # Clear thread-local data to simulate different thread
-            if hasattr(threading.current_thread(), '_oauth_session_data'):
-                delattr(threading.current_thread(), '_oauth_session_data')
+            if hasattr(threading.current_thread(), "_oauth_session_data"):
+                delattr(threading.current_thread(), "_oauth_session_data")
 
             # Validate state (simulates successful OAuth callback)
             is_valid = check_state(state)
@@ -558,7 +584,7 @@ class TestOAuthFlowIntegration(unittest.TestCase):
             callback_session_data = get_oauth_session_data()
 
             # Simulate the new redirect logic
-            original_request = callback_session_data.get('original_request_url')
+            original_request = callback_session_data.get("original_request_url")
 
             # Simulate callback path (no next parameter)
             next_url = ""  # No explicit next parameter
@@ -568,11 +594,11 @@ class TestOAuthFlowIntegration(unittest.TestCase):
                 if original_request:
                     next_url = original_request
                 else:
-                    next_url = '/'
+                    next_url = "/"
 
             # Verify that original request URL is used
             self.assertEqual(next_url, original_url)
-            self.assertNotEqual(next_url, '/')
+            self.assertNotEqual(next_url, "/")
 
             return True
 
@@ -585,5 +611,5 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         self.assertTrue(True, "Redirect logic should prioritize original request URL")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
