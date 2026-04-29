@@ -537,50 +537,50 @@ class TestOAuthFlowIntegration(unittest.TestCase):
         """Test that redirect logic prioritizes original request URL over callback path"""
         # This test validates the improved redirect logic
         original_url = "/search"
-        
+
         # Create OAuth state and store original URL
         state = create_oauth_state("user_session_redirect_logic_test")
         session_data = get_oauth_session_data()
         session_data['original_request_url'] = original_url
         store_oauth_session_data(session_data)
-        
+
         # Simulate the redirect logic from callback context
         def simulate_redirect_logic():
             # Clear thread-local data to simulate different thread
             if hasattr(threading.current_thread(), '_oauth_session_data'):
                 delattr(threading.current_thread(), '_oauth_session_data')
-            
+
             # Validate state (simulates successful OAuth callback)
             is_valid = check_state(state)
             self.assertTrue(is_valid, "State validation should succeed")
-            
+
             # Get session data
             callback_session_data = get_oauth_session_data()
-            
+
             # Simulate the new redirect logic
             original_request = callback_session_data.get('original_request_url')
-            
+
             # Simulate callback path (no next parameter)
             next_url = ""  # No explicit next parameter
-            
+
             # Apply the new logic: prioritize original request over callback path
             if not next_url:
                 if original_request:
                     next_url = original_request
                 else:
                     next_url = '/'
-            
+
             # Verify that original request URL is used
             self.assertEqual(next_url, original_url)
             self.assertNotEqual(next_url, '/')
-            
+
             return True
-        
+
         # Run the simulation
         thread = threading.Thread(target=simulate_redirect_logic)
         thread.start()
         thread.join()
-        
+
         # Verify the flow completed successfully
         self.assertTrue(True, "Redirect logic should prioritize original request URL")
 
