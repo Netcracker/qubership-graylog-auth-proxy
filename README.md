@@ -341,6 +341,12 @@ To execute build just run the command:
 docker build .
 ```
 
+Or using the Makefile:
+
+```bash
+make build
+```
+
 ## Debug
 
 The `graylog-auth-proxy` is using the `python-ldap` to work with LDAP. Currently this library can't be installed
@@ -369,6 +375,12 @@ Next, need to install requirements in created `venv`:
 
 ```bash
 python -m pip install -r requirements.txt
+```
+
+Or using the Makefile (creates the `venv` automatically):
+
+```bash
+make install
 ```
 
 Next, to run `graylog-auth-proxy` you need the config file or set parameters using the CLI args.
@@ -413,29 +425,33 @@ Config for Visual Studio Code to run this proxy locally:
 
 ## Tests
 
-Firstly need to activate previosly created `venv`:
+The easiest way to run tests is via the Makefile (no system LDAP libraries required):
+
+```bash
+make test
+```
+
+This automatically creates a `venv`, installs test dependencies, and runs pytest.
+
+Alternatively, using a manually managed `venv`:
 
 ```bash
 source .venv/bin/activate
-```
-
-Next, need to install requirements in created `venv`:
-
-```bash
 python -m pip install -r test-requirements.txt
-```
-
-To run tests execute the command:
-
-```bash
 python -m pytest -v tests/
 ```
 
-Or use IDE to run tests.
+Or use an IDE to run tests.
 
 ### Coverage for tests
 
 To calculate and show test coverage:
+
+```bash
+make test-coverage
+```
+
+Or manually:
 
 ```bash
 coverage run -m pytest -v tests/ && coverage report -m
