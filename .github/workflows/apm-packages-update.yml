@@ -64,8 +64,8 @@ jobs:
             {
             echo "BRANCH=${DEFAULT_BRANCH}"
             echo "TARGET="
-            echo "DEBUG='false'"
-            echo "DRY_RUN='false'"
+            echo "DEBUG=false"
+            echo "DRY_RUN=false"
             } >> $GITHUB_ENV
           fi
 
