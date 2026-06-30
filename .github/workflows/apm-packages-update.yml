@@ -1,0 +1,86 @@
+name: Apm packages update
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Base branch for the update PR
+        required: false
+        default: main
+        type: string
+      target:
+        description: Optional APM target override; leave empty to use apm.yml
+        required: false
+        default: ""
+        type: string
+      debug:
+        description: Print APM and runner diagnostics
+        required: false
+        default: true
+        type: boolean
+      dry-run:
+        description: Skip pull request creation and run APM in dry-run mode
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: '0 0 */3 * *' # every 3 days at midnight UTC
+permissions:
+  contents: read
+
+run-name: APM update ${{ github.event_name == 'schedule' && 'scheduled' || github.event_name == 'workflow_dispatch' && inputs.dry-run && 'dry-run' || 'apply' }} [${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.event.repository.default_branch }}]
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.event.repository.default_branch }}
+  cancel-in-progress: true
+
+jobs:
+  test-apm-update:
+    name: APM packages update
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set environment variables depends on event
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_TARGET: ${{ inputs.target }}
+          INPUT_DEBUG: ${{ inputs.debug }}
+          INPUT_DRY_RUN: ${{ inputs.dry-run }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Triggered by workflow_dispatch event"
+            {
+            echo "BRANCH=${INPUT_BRANCH}"
+            echo "TARGET=${INPUT_TARGET}"
+            echo "DEBUG=${INPUT_DEBUG}"
+            echo "DRY_RUN=${INPUT_DRY_RUN}"
+            } >> $GITHUB_ENV
+          else
+            echo "Triggered by schedule event"
+            {
+            echo "BRANCH=${DEFAULT_BRANCH}"
+            echo "TARGET="
+            echo "DEBUG='false'"
+            echo "DRY_RUN='false'"
+            } >> $GITHUB_ENV
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          token: ${{ secrets.APM_UPDATE_TOKEN }}
+          ref: ${{ env.BRANCH }}
+          persist-credentials: false
+
+      - name: Run apm-packages-update action
+        uses: netcracker/qubership-workflow-hub/actions/apm-packages-update@fix/try-to-fix-microsoft-apm-action
+        with:
+          branch: ${{ env.BRANCH }}
+          debug: ${{ env.DEBUG }}
+          dry-run: ${{ env.DRY_RUN }}
+          target: ${{ env.TARGET }}
+          token: ${{ secrets.APM_UPDATE_TOKEN }}
