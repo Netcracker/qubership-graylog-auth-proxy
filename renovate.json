@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "schedule:weekly"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "description": "Group all GitHub Actions updates together",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions deps",
+      "commitMessageTopic": "github-actions deps"
+    },
+    {
+      "description": "Group all Docker/Dockerfile updates together",
+      "matchManagers": ["dockerfile"],
+      "groupName": "docker deps",
+      "commitMessageTopic": "docker deps"
+    },
+    {
+      "description": "Group all pip/Python dependency updates together",
+      "matchManagers": ["pip_requirements"],
+      "groupName": "pip deps",
+      "commitMessageTopic": "pip deps"
+    }
+  ]
+}
