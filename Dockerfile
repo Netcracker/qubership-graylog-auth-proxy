@@ -1,4 +1,4 @@
-FROM python:3.14.4-alpine3.23
+FROM python:3.14.6-alpine3.24
 
 COPY requirements.txt /etc/requirements.txt
 
@@ -8,12 +8,12 @@ COPY src/ /usr/src/app/
 
 # Install required software
 RUN apk --no-cache add --upgrade \
-        "openldap-dev=2.6.10-r0" \
+        "openldap-dev=2.6.13-r0" \
     && apk --no-cache add --upgrade --virtual \
         build-dependencies \
-        "build-base=0.5-r3" \
+        "build-base=0.5-r4" \
     && python3 -m pip install --no-cache-dir --upgrade \
-        "pip==26.0.1" \
+        "pip==26.1.2" \
     && python3 -m pip install --no-cache-dir -r /etc/requirements.txt \
     && apk del build-dependencies
 
