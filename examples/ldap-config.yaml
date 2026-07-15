@@ -1,0 +1,90 @@
+log-level: {{ .Values.graylog.authProxy.logLevel | quote }}
+
+host: 0.0.0.0
+port: 8888
+metrics-port: 8889
+
+cookie: authproxy
+auth-type: {{ .Values.graylog.authProxy.authType | quote }}
+requests-timeout: {{ .Values.graylog.authProxy.requestsTimeout | default 30 }}
+
+
+
+ldap-url: {{ .Values.graylog.authProxy.ldap.url | quote }}
+ldap-starttls: {{ .Values.graylog.authProxy.ldap.startTls }}
+ldap-over-ssl: {{ .Values.graylog.authProxy.ldap.overSsl }}
+auth-tls-insecure-skip-verify: {{ .Values.graylog.authProxy.ldap.skipVerify }}
+
+{{- if .Values.graylog.authProxy.ldap.ca }}
+{{- if and .Values.graylog.authProxy.ldap.ca.secretName .Values.graylog.authProxy.ldap.ca.secretKey }}
+auth-tls-ca-file: /usr/share/ssl/auth/ca.crt
+{{- end }}
+{{- end }}
+{{- if .Values.graylog.authProxy.ldap.cert }}
+{{- if and .Values.graylog.authProxy.ldap.cert.secretName .Values.graylog.authProxy.ldap.cert.secretKey }}
+auth-tls-cert-file: /usr/share/ssl/auth/tls.crt
+{{- end }}
+{{- end }}
+{{- if .Values.graylog.authProxy.ldap.key }}
+{{- if and .Values.graylog.authProxy.ldap.key.secretName .Values.graylog.authProxy.ldap.key.secretKey }}
+auth-tls-key-file: /usr/share/ssl/auth/tls.key
+{{- end }}
+{{- end }}
+
+disable-referrals: {{ .Values.graylog.authProxy.ldap.disableReferrals }}
+
+base-dn: {{ .Values.graylog.authProxy.ldap.baseDN | quote }}
+bind-dn: {{ .Values.graylog.authProxy.ldap.bindDN | quote }}
+
+htpasswd: "./.htpasswd"
+filter: {{ .Values.graylog.authProxy.ldap.searchFilter | quote }}
+
+
+
+
+graylog-admin-user: "graylog_api_th_user"
+
+{{- if .Values.graylog.tls }}
+{{- if .Values.graylog.tls.http }}
+{{- if .Values.graylog.tls.http.enabled }}
+graylog-host: "https://127.0.0.1:9000"
+proxy-tls-enabled: true
+
+graylog-tls-insecure-skip-verify: false
+
+{{- if ( include "graylog.cacerts.present" . ) }}
+graylog-tls-ca-file: /usr/share/graylog/data/ssl/http/ca.crt
+{{- end }}
+{{- if ( include "graylog.cert.present" . ) }}
+graylog-tls-cert-file: /usr/share/graylog/data/ssl/http/tls.crt
+proxy-tls-cert-file: /usr/share/graylog/data/ssl/http/tls.crt
+{{- end }}
+{{- if ( include "graylog.key.present" . ) }}
+graylog-tls-key-file: /usr/share/graylog/data/ssl/http/tls.key
+proxy-tls-key-file: /usr/share/graylog/data/ssl/http/tls.key
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.graylog.authProxy.preCreatedUsers }}
+graylog-pre-created-users: "{{ .Values.graylog.authProxy.preCreatedUsers }}"
+{{- else }}
+pre-created-users: "admin,auditViewer,operator,telegraf_operator,graylog-sidecar,graylog_api_th_user"
+{{- end }}
+
+rotation-pass-interval: {{ .Values.graylog.authProxy.rotationPassInterval | default 3 }}
+
+{{- if .Values.graylog.authProxy.roleMapping }}
+role-mapping: '{{ .Values.graylog.authProxy.roleMapping }}'
+{{- else }}
+role-mapping: '[]'
+{{- end }}
+
+{{- if .Values.graylog.authProxy.streamMapping }}
+stream-mapping: '{{ .Values.graylog.authProxy.streamMapping }}'
+{{- else }}
+stream-mapping: ''
+{{- end }}
+
+http-realm: Restricted

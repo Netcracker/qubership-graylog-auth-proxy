@@ -1,0 +1,55 @@
+# Example configuration for CORS domain parameter
+# This file shows how to configure the domain parameter for CORS headers
+
+# Common options
+log_level: INFO
+host: "0.0.0.0"
+port: 8888
+metrics_port: 8889
+proxy_tls_enabled: false
+proxy_tls_cert_file: ""
+proxy_tls_key_file: ""
+cookie: "authproxy"
+domain: "mycompany.com"  # Set specific domain for CORS
+requests_timeout: 30
+
+# Authentication type
+auth_type: oauth  # or 'ldap'
+
+# OAuth2 options (example)
+oauth_host: "https://keycloak.mycompany.com"
+oauth_authorization_path: "/realms/ldap/protocol/openid-connect/auth"
+oauth_token_path: "/realms/ldap/protocol/openid-connect/token"
+oauth_userinfo_path: "/realms/ldap/protocol/openid-connect/userinfo"
+oauth_redirect_uri: "http://10.101.17.197/search"
+oauth_client_id: "graylog197"
+oauth_client_secret: ""
+oauth_scopes: "openid profile roles"
+oauth_user_jsonpath: "preferred_username"
+oauth_roles_jsonpath: "realm_access.roles[*]"
+
+# Graylog options
+graylog_host: "http://graylog.mycompany.com:9000"
+graylog_tls_insecure_skip_verify: false
+graylog_admin_user: "admin"
+graylog_pre_created_users: "admin,auditViewer,operator"
+
+# TLS options for auth provider
+auth_tls_insecure_skip_verify: false
+auth_tls_ca_file: ""
+auth_tls_cert_file: ""
+auth_tls_key_file: ""
+
+# Alternative configurations:
+
+# 1. Allow all domains (default)
+# domain: "*"
+
+# 2. Allow localhost for development
+# domain: "localhost"
+
+# 3. Allow specific IP address
+# domain: "10.101.17.197"
+
+# 4. Allow subdomain
+# domain: "app.mycompany.com"

@@ -1,0 +1,94 @@
+log-level: {{ .Values.graylog.authProxy.logLevel | quote }}
+
+host: 0.0.0.0
+port: 8888
+metrics-port: 8889
+
+cookie: authproxy
+auth-type: {{ .Values.graylog.authProxy.authType | quote }}
+requests-timeout: {{ .Values.graylog.authProxy.requestsTimeout | default 30 }}
+
+
+
+oauth-host: {{ .Values.graylog.authProxy.oauth.host | quote }}
+oauth-authorization-path: {{ .Values.graylog.authProxy.oauth.authorizationPath | quote }}
+oauth-token-path: {{ .Values.graylog.authProxy.oauth.tokenPath | quote }}
+oauth-userinfo-path: {{ .Values.graylog.authProxy.oauth.userinfoPath | quote }}
+{{- if .Values.graylog.authProxy.oauth.redirectUri }}
+oauth-redirect-uri: {{ .Values.graylog.authProxy.oauth.redirectUri | quote }}
+{{- else }}
+oauth-redirect-uri: {{ include "graylog.host" . }}
+{{- end }}
+
+auth-tls-insecure-skip-verify: {{ .Values.graylog.authProxy.oauth.skipVerify }}
+{{- if .Values.graylog.authProxy.oauth.ca }}
+{{- if and .Values.graylog.authProxy.oauth.ca.secretName .Values.graylog.authProxy.oauth.ca.secretKey }}
+auth-tls-ca-file: /usr/share/ssl/auth/ca.crt
+{{- end }}
+{{- end }}
+{{- if .Values.graylog.authProxy.oauth.cert }}
+{{- if and .Values.graylog.authProxy.oauth.cert.secretName .Values.graylog.authProxy.oauth.cert.secretKey }}
+auth-tls-cert-file: /usr/share/ssl/auth/tls.crt
+{{- end }}
+{{- end }}
+{{- if .Values.graylog.authProxy.oauth.key }}
+{{- if and .Values.graylog.authProxy.oauth.key.secretName .Values.graylog.authProxy.oauth.key.secretKey }}
+auth-tls-key-file: /usr/share/ssl/auth/tls.key
+{{- end }}
+{{- end }}
+
+oauth-client-id: {{ .Values.graylog.authProxy.oauth.clientID | quote }}
+oauth-htpasswd: "./.htpasswd"
+oauth-scopes: {{ .Values.graylog.authProxy.oauth.scopes | quote }}
+oauth-user-jsonpath: {{ .Values.graylog.authProxy.oauth.userJsonpath | quote }}
+oauth-roles-jsonpath: {{ .Values.graylog.authProxy.oauth.rolesJsonpath | quote }}
+
+
+
+
+graylog-admin-user: "graylog_api_th_user"
+
+{{- if .Values.graylog.tls }}
+{{- if .Values.graylog.tls.http }}
+{{- if .Values.graylog.tls.http.enabled }}
+graylog-host: "https://127.0.0.1:9000"
+proxy-tls-enabled: true
+
+graylog-tls-insecure-skip-verify: false
+
+{{- if ( include "graylog.cacerts.present" . ) }}
+graylog-tls-ca-file: /usr/share/graylog/data/ssl/http/ca.crt
+{{- end }}
+{{- if ( include "graylog.cert.present" . ) }}
+graylog-tls-cert-file: /usr/share/graylog/data/ssl/http/tls.crt
+proxy-tls-cert-file: /usr/share/graylog/data/ssl/http/tls.crt
+{{- end }}
+{{- if ( include "graylog.key.present" . ) }}
+graylog-tls-key-file: /usr/share/graylog/data/ssl/http/tls.key
+proxy-tls-key-file: /usr/share/graylog/data/ssl/http/tls.key
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.graylog.authProxy.preCreatedUsers }}
+graylog-pre-created-users: "{{ .Values.graylog.authProxy.preCreatedUsers }}"
+{{- else }}
+pre-created-users: "admin,auditViewer,operator,telegraf_operator,graylog-sidecar,graylog_api_th_user"
+{{- end }}
+
+rotation-pass-interval: {{ .Values.graylog.authProxy.rotationPassInterval | default 3 }}
+
+{{- if .Values.graylog.authProxy.roleMapping }}
+role-mapping: '{{ .Values.graylog.authProxy.roleMapping }}'
+{{- else }}
+role-mapping: '[]'
+{{- end }}
+
+{{- if .Values.graylog.authProxy.streamMapping }}
+stream-mapping: '{{ .Values.graylog.authProxy.streamMapping }}'
+{{- else }}
+stream-mapping: ''
+{{- end }}
+
+http-realm: Restricted

@@ -1,0 +1,115 @@
+# Technical Users Configuration Example
+# This example shows how to configure technical users for API access, monitoring, and automation
+
+# Common settings
+log-level: "INFO"
+host: 0.0.0.0
+port: 8888
+metrics-port: 8889
+cookie: authproxy
+auth-type: "oauth"  # Can be "oauth" or "ldap" - technical users work with both
+requests-timeout: 30
+
+# Technical Users Configuration
+# These users bypass OAuth/LDAP authentication and authenticate directly with the proxy
+
+# Basic Auth users: username:password format
+# These users authenticate using standard HTTP Basic Authentication
+# Example: curl -u <username>:<password> https://graylog.example.com/api/system/metrics
+technical-users-basic-auth: "monitoring:secret123,backup:backup456,telegraf:telegraf789"
+
+# Static Token users: username:token format
+# These users authenticate using Bearer token authentication
+# Example: curl -H "Authorization: Bearer <token>" https://graylog.example.com/api/system/metrics
+technical-users-static-tokens: "api-client:abc123def456,service-account:xyz789uvw012,prometheus:token123456"
+
+# User roles: username:role1,role2;username2:role3 format
+# Assign specific Graylog roles to technical users
+# Use semicolons (;) to separate different users
+# Use commas (,) to separate multiple roles for the same user
+technical-users-roles: "monitoring:Reader;backup:Reader,Admin;api-client:Admin;telegraf:Reader;service-account:Reader;prometheus:Reader"
+
+# OAuth Configuration (required when auth-type is "oauth")
+oauth-host: "https://keycloak.example.com"
+oauth-authorization-path: "/realms/myrealm/protocol/openid-connect/auth"
+oauth-token-path: "/realms/myrealm/protocol/openid-connect/token"
+oauth-userinfo-path: "/realms/myrealm/protocol/openid-connect/userinfo"
+oauth-redirect-uri: "https://graylog.example.com/code"
+oauth-client-id: "graylog-auth-proxy"
+oauth-htpasswd: "./.htpasswd"  # OAuth client secret in Base64
+oauth-scopes: "openid profile roles"
+oauth-user-jsonpath: "preferred_username"
+oauth-roles-jsonpath: "realm_access.roles[*]"
+
+# Graylog Configuration
+graylog-host: "https://graylog.example.com:9000"
+graylog-admin-user: "graylog_api_th_user"
+graylog-pre-created-users: "admin,auditViewer,operator,telegraf_operator,graylog-sidecar,graylog_api_th_user"
+rotation-pass-interval: 3
+
+# Role and Stream Mapping (for regular OAuth/LDAP users)
+role-mapping: '[]'
+stream-mapping: ''
+
+# TLS Configuration
+graylog-tls-insecure-skip-verify: false
+auth-tls-insecure-skip-verify: false
+
+# Session and Cookie Configuration
+access-control-max-age: 86400  # 24 hours
+cookie-max-age: 3600  # 1 hour
+cookie-expires-hours: 1.0
+session-expiration-time: 3600  # 1 hour
+
+# Usage Examples:
+#
+# 1. Basic Auth authentication:
+#    curl -u monitoring:<password> https://graylog.example.com/api/system/metrics
+#    curl -u backup:<password> https://graylog.example.com/api/users
+#    curl -u telegraf:<password> https://graylog.example.com/api/system/inputs
+#
+# 2. Bearer Token authentication:
+#    curl -H "Authorization: Bearer <token>" https://graylog.example.com/api/streams
+#    curl -H "Authorization: Bearer <token>" https://graylog.example.com/api/system/cluster
+#    curl -H "Authorization: Bearer <token>" https://graylog.example.com/api/system/metrics
+#
+# 3. Python example with requests library:
+#    import requests
+#    # Basic Auth
+#    response = requests.get('https://graylog.example.com/api/system/metrics',
+#                           auth=('monitoring', 'secret123'))
+#    # Bearer Token
+#    headers = {'Authorization': 'Bearer abc123def456'}
+#    response = requests.get('https://graylog.example.com/api/streams',
+#                           headers=headers)
+#
+# 4. Prometheus scrape config example:
+#    scrape_configs:
+#      - job_name: 'graylog'
+#        static_configs:
+#          - targets: ['graylog.example.com']
+#        metrics_path: '/api/system/metrics'
+#        scheme: https
+#        basic_auth:
+#          username: monitoring
+#          password: secret123
+#
+# 5. Telegraf input plugin example:
+#    [[inputs.http]]
+#      urls = ["https://graylog.example.com/api/system/metrics"]
+#      username = "telegraf"
+#      password = "telegraf789"
+#      data_format = "json"
+
+# Important Notes:
+# - Technical users have HIGHEST authentication priority (checked first)
+# - They bypass OAuth/LDAP authentication flows completely
+# - They do NOT create sessions or use cookies (authenticate on each request)
+# - They can be assigned specific Graylog roles for access control
+# - Use strong, unique passwords and tokens for production
+# - Consider rotating credentials regularly for security
+# - These users are ideal for:
+#   * API access from monitoring systems (Prometheus, Telegraf)
+#   * Automated scripts and CI/CD pipelines
+#   * Service accounts for applications
+#   * Backup and maintenance tools

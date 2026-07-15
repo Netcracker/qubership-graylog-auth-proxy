@@ -1,0 +1,86 @@
+log-level: "INFO"
+
+host: 0.0.0.0
+port: 8888
+metrics-port: 8889
+
+cookie: authproxy
+auth-type: "[ldap|oauth]"
+requests-timeout: "30"
+
+# Timing configuration (optional - defaults shown)
+access-control-max-age: 86400  # CORS preflight cache time in seconds (default: 86400 = 24 hours)
+cookie-max-age: 3600  # Session cookie max age in seconds (default: 3600 = 1 hour)
+cookie-expires-hours: 1.0  # Cookie expiration time in hours (default: 1.0 hour)
+session-expiration-time: 3600  # Session expiration time in seconds (default: 3600 = 1 hour)
+
+### LDAP config section
+
+ldap-url: ""
+ldap-starttls: "false"
+ldap-over-ssl: "false"
+
+disable-referrals: {{ .Values.graylog.authProxy.ldap.disableReferrals }}
+
+base-dn: "<base_dn>"
+bind-dn: "<bind_dn>"
+filter: "<filter>"
+
+htpasswd: ".htpasswd"
+
+#### OAuth2 and LDAP TLS certificates
+
+auth-tls-insecure-skip-verify: false
+auth-tls-ca-file: /usr/share/ssl/auth/ca.crt
+auth-tls-cert-file: /usr/share/ssl/auth/tls.crt
+auth-tls-key-file: /usr/share/ssl/auth/tls.key
+
+### OAuth2 config section
+
+oauth-host: {{ .Values.graylog.authProxy.oauth.host | quote }}
+oauth-authorization-path: {{ .Values.graylog.authProxy.oauth.authorizationPath | quote }}
+oauth-token-path: {{ .Values.graylog.authProxy.oauth.tokenPath | quote }}
+oauth-userinfo-path: {{ .Values.graylog.authProxy.oauth.userinfoPath | quote }}
+oauth-redirect-uri: {{ .Values.graylog.authProxy.oauth.redirectUri | quote }}
+
+oauth-client-id: {{ .Values.graylog.authProxy.oauth.clientID | quote }}
+oauth-scopes: {{ .Values.graylog.authProxy.oauth.scopes | quote }}
+oauth-user-jsonpath: {{ .Values.graylog.authProxy.oauth.userJsonpath | quote }}
+oauth-roles-jsonpath: {{ .Values.graylog.authProxy.oauth.rolesJsonpath | quote }}
+oauth-htpasswd: "./.htpasswd"
+
+### Graylog config section
+
+graylog-admin-user: "graylog_api_th_user"
+
+graylog-host: "https://127.0.0.1:9000"
+proxy-tls-enabled: true
+
+graylog-pre-created-users: "admin,auditViewer,operator,telegraf_operator,graylog-sidecar,graylog_api_th_user"
+rotation-pass-interval: {{ .Values.graylog.authProxy.rotationPassInterval | default 3 }}
+
+role-mapping: '[]'
+stream-mapping: ''
+
+http-realm: Restricted
+
+### Technical Users Configuration (works with both OAuth and LDAP)
+
+# Basic Auth users (username:password format)
+technical-users-basic-auth: "monitoring:secret123,backup:backup456"
+
+# Static Token users (username:token format)
+technical-users-static-tokens: "api-client:abc123def456,prometheus:token123"
+
+# User roles (username:role1,role2;username2:role3 format)
+technical-users-roles: "monitoring:Reader;backup:Reader,Admin;api-client:Admin;prometheus:Reader"
+
+### Graylog TLS certificates
+
+graylog-tls-insecure-skip-verify: false
+
+graylog-tls-ca-file: /usr/share/graylog/data/ssl/http/ca.crt
+graylog-tls-cert-file: /usr/share/graylog/data/ssl/http/tls.crt
+proxy-tls-cert-file: /usr/share/graylog/data/ssl/http/tls.crt
+graylog-tls-key-file: /usr/share/graylog/data/ssl/http/tls.key
+proxy-tls-key-file: /usr/share/graylog/data/ssl/http/tls.key

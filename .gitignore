@@ -7,5 +7,13 @@
 .idea/
 *.iml
 
-# Python
+# PyCache
+*__pycache__
+
+# victual environments
 venv/
+.venv/
+
+# test data
+test-run/
+.pytest_cache/
