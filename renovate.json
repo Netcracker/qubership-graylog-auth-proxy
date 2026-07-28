@@ -1,15 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "schedule:weekly"],
-  "labels": ["dependencies"],
+  "extends": [
+    "github>Netcracker/renovate-config:base",
+    "github>Netcracker/renovate-config:github-actions",
+    "github>Netcracker/renovate-config:netcracker-dependencies"
+  ],
   "prConcurrentLimit": 10,
   "packageRules": [
-    {
-      "description": "Group all GitHub Actions updates together",
-      "matchManagers": ["github-actions"],
-      "groupName": "github-actions deps",
-      "commitMessageTopic": "github-actions deps"
-    },
     {
       "description": "Group all Docker/Dockerfile updates together",
       "matchManagers": ["dockerfile"],
