@@ -8,10 +8,11 @@
   "prConcurrentLimit": 10,
   "packageRules": [
     {
-      "description": "Group all Docker/Dockerfile updates together",
+      "description": "Group third-party Dockerfile image non-major updates",
       "matchManagers": ["dockerfile"],
-      "groupName": "docker deps",
-      "commitMessageTopic": "docker deps"
+      "matchPackageNames": ["!ghcr.io/netcracker/**"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest", "pinDigest"],
+      "groupName": "Dockerfile image non-major updates"
     },
     {
       "description": "Group all pip/Python dependency updates together",
