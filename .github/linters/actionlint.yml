@@ -1,5 +1,9 @@
 paths:
   .github/workflows/**/*.{yml,yaml}:
     ignore:
-    - 'shellcheck reported issue in this script: SC2086:info.+'
-    - 'shellcheck reported issue in this script: SC2002:style.+'
+      - 'shellcheck reported issue in this script: SC2086:info.+'
+      - 'shellcheck reported issue in this script: SC2002:style.+'
+  .github/workflows/renovate-config-lint.yaml:
+    ignore:
+      # GitHub Actions supports concurrency.queue, but actionlint 1.7.12 does not yet.
+      - 'unexpected key "queue" for "concurrency" section'
