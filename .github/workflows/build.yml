@@ -60,7 +60,7 @@ jobs:
   test:
     name: Run Python tests
     needs: changes
-    if: needs.changes.outputs.tests == 'true'
+    if: needs.changes.outputs.tests != 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -82,7 +82,7 @@ jobs:
   multiplatform_build:
     name: Build container image
     needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.container == 'true'
+    if: github.event_name == 'pull_request' && needs.changes.outputs.container != 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -155,43 +155,16 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   ci_gate:
-    name: Graylog Auth Proxy CI Gate
+    name: CI Gate
     needs: [changes, test, multiplatform_build]
-    if: always() && github.event_name == 'pull_request'
+    if: ${{ always() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: read
+    permissions: {}
     steps:
-      - name: Verify required jobs
-        env:
-          CHANGES_RESULT: ${{ needs.changes.result }}
-          TESTS_REQUIRED: ${{ needs.changes.outputs.tests }}
-          TEST_RESULT: ${{ needs.test.result }}
-          CONTAINER_REQUIRED: ${{ needs.changes.outputs.container }}
-          CONTAINER_RESULT: ${{ needs.multiplatform_build.result }}
-        run: |
-          set -euo pipefail
-
-          if [[ "$CHANGES_RESULT" != "success" ]]; then
-            echo "Change detection did not succeed: $CHANGES_RESULT"
-            exit 1
-          fi
-
-          if [[ "$TESTS_REQUIRED" == "true" && "$TEST_RESULT" != "success" ]]; then
-            echo "Python tests were required but did not succeed: $TEST_RESULT"
-            exit 1
-          fi
-          if [[ "$TESTS_REQUIRED" != "true" && "$TEST_RESULT" != "skipped" ]]; then
-            echo "Python tests were not required but had an unexpected result: $TEST_RESULT"
-            exit 1
-          fi
-
-          if [[ "$CONTAINER_REQUIRED" == "true" && "$CONTAINER_RESULT" != "success" ]]; then
-            echo "The container build was required but did not succeed: $CONTAINER_RESULT"
-            exit 1
-          fi
-          if [[ "$CONTAINER_REQUIRED" != "true" && "$CONTAINER_RESULT" != "skipped" ]]; then
-            echo "The container build was not required but had an unexpected result: $CONTAINER_RESULT"
-            exit 1
-          fi
+      - name: Require validation when applicable
+        if: >-
+          needs.changes.result != 'success' ||
+          (needs.changes.outputs.tests != 'false' && needs.test.result != 'success') ||
+          (needs.changes.outputs.container != 'false' && needs.multiplatform_build.result != 'success')
+        run: exit 1
