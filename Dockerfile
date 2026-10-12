@@ -10,7 +10,7 @@ COPY src/ /usr/src/app/
 # renovate: datasource=repology depName=alpine_3_24/openldap versioning=apk
 RUN apk --no-cache upgrade \
     && apk --no-cache add \
-        "openldap-dev=2.6.14-r0" \
+        "openldap-dev=2.6.15-r0" \
     && apk --no-cache add --virtual \
         build-dependencies \
         "build-base=0.5-r4" \
